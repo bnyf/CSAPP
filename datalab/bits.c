@@ -152,7 +152,7 @@ int bitAnd(int x, int y) {
 int getByte(int x, int n) {
 	int temp = n << 3;
 	x = x >> temp;
-	int result = x & 0x000000ff;
+	int result = x & 0xff;
 	return result;
 }
 /* 
@@ -164,7 +164,7 @@ int getByte(int x, int n) {
  *   Rating: 3 
  */
 int logicalShift(int x, int n) {
-	int result = (x >> n) & (0xffffffff >> n);
+	int result = (x >> n) & (~(((1 << 31) >> n) << 1));
   	return result;
 }
 /*
@@ -175,15 +175,21 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int bitCount(int x) {
-	int logicalShift1 = (x >> 1) & 0x7fffffff;
-	x = x - (logicalShift1 & 0x55555555);
-	int logicalShift2 = (x >> 2) & 0x3fffffff;
-	x = (x & 0x33333333) + (logicalShift2 & 0x33333333);
-	int logicalShift4 = (x >> 4) & 0x0fffffff;
-	x = (x + logicalShift4) & 0x0f0f0f0f;
-	int logicalShift8 = (x >> 8) & 0x00ffffff;
+	int tmp = 0x55 | (0x55 << 8);
+	int mask1 = tmp | (tmp << 16);
+	tmp = 0x33 | (0x33 << 8);
+	int mask2 = tmp | (tmp << 16);
+	tmp = 0x0f | (0x0f << 8);
+	int mask3 = tmp | (tmp << 16);
+	int logicalShift1 = (x >> 1) & ((1 << 31) - 1);
+	x = x - (logicalShift1 & mask1);
+	int logicalShift2 = (x >> 2) & ((1 << 30) - 1);
+	x = (x & mask2) + (logicalShift2 & mask2);
+	int logicalShift4 = (x >> 4) & ((1 << 28) - 1);
+	x = (x + logicalShift4) & mask3;
+	int logicalShift8 = (x >> 8) & ((1 << 24) - 1);
 	x = x + logicalShift8;
-	int logicalShift16 = (x >> 16) & 0x0000ffff;
+	int logicalShift16 = (x >> 16) & ((1 << 8) - 1);
 	x = x + logicalShift16;
 	
 	return x & 0x3f;
@@ -270,7 +276,7 @@ int isLessOrEqual(int x, int y) {
 	int tmp = signx ^ signy;
 	int tmp1 = tmp & signx;
 	int y_minus_x = y+(~x+1);
-	return tmp1 | (!(x^y)) | (!tmp & !(y_minus_x&0x80000000));
+	return tmp1 | (!(x^y)) | (!tmp & !(y_minus_x&(1 << 31)));
 }
 /*
  * ilog2 - return floor(log base 2 of x), where x > 0
@@ -300,8 +306,8 @@ int ilog2(int x) {
  *   Rating: 2
  */
 unsigned float_neg(unsigned uf) {
-	unsigned result = uf ^ 0x80000000;
-	if((uf & 0x7fffffff) > 0x7f800000){
+	unsigned result = uf ^ (1 << 31);
+	if((uf & ((1 << 31) - 1)) > (0xff << 23)){
 		result = uf;
 	}	
 	return result;
@@ -316,7 +322,7 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-	int sign = x & 0x80000000;
+	int sign = x & (1 << 31);
 	if(x < 0){
 		x = -x;
 	}
@@ -329,17 +335,17 @@ unsigned float_i2f(int x) {
 	int frac = 0;
 	int flag = 0;
 	if(first1 > 23){
-		frac = ((x >> (first1 - 23)) & 0x007fffff);		
+		frac = ((x >> (first1 - 23)) & ((0xff << 15)|(0xff << 7)|(0x7f)));
 		unsigned tmp = x << (55 - first1);
-		if(tmp > 0x80000000)
+		if(tmp > (1 << 31))
 			flag = 1;
-		else if(tmp == 0x80000000){
+		else if(tmp == (1 << 31)){
 			if((frac & 0x1) == 0x1)
 				flag = 1;
 		}
 	}
 	else{
-		frac = (x << (23 - first1)) & 0x007fffff;
+		frac = (x << (23 - first1)) & ((0xff << 15)|(0xff << 7)|(0x7f));
 	}
 	int exp = 127 + first1;
 	return sign + (exp << 23) + frac + flag;
@@ -356,15 +362,16 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
+	int mask1 = 0xff << 23;
 	unsigned result = 0;
-	if((uf & 0x7f800000) == 0x7f800000){
+	if((uf & mask1) == mask1){
 		result = uf;
 	}
-	else if((uf & 0x7f800000) == 0x0){
-		result = (uf & 0x80000000) | (uf << 1);
+	else if((uf & mask1) == 0x0){
+		result = (uf & (1 << 31)) | (uf << 1);
 	}
 	else{
-		result = uf + 0x00800000;
+		result = uf + (1 << 23);
 	}
 	return result;
 }
