@@ -150,10 +150,7 @@ int bitAnd(int x, int y) {
  *   Rating: 2
  */
 int getByte(int x, int n) {
-	int temp = n << 3;
-	x = x >> temp;
-	int result = x & 0xff;
-	return result;
+	return (x >> (n << 3)) & 0xff;
 }
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
@@ -177,20 +174,15 @@ int logicalShift(int x, int n) {
 int bitCount(int x) {
 	int tmp = 0x55 | (0x55 << 8);
 	int mask1 = tmp | (tmp << 16);
-	tmp = 0x33 | (0x33 << 8);
-	int mask2 = tmp | (tmp << 16);
-	tmp = 0x0f | (0x0f << 8);
-	int mask3 = tmp | (tmp << 16);
-	int logicalShift1 = (x >> 1) & ((1 << 31) - 1);
-	x = x - (logicalShift1 & mask1);
-	int logicalShift2 = (x >> 2) & ((1 << 30) - 1);
-	x = (x & mask2) + (logicalShift2 & mask2);
-	int logicalShift4 = (x >> 4) & ((1 << 28) - 1);
-	x = (x + logicalShift4) & mask3;
-	int logicalShift8 = (x >> 8) & ((1 << 24) - 1);
-	x = x + logicalShift8;
-	int logicalShift16 = (x >> 16) & ((1 << 8) - 1);
-	x = x + logicalShift16;
+	int tmp1 = 0x33 | (0x33 << 8);
+	int mask2 = tmp1 | (tmp1 << 16);
+	int tmp2 = 0x0f | (0x0f << 8);
+	int mask3 = tmp2 | (tmp2 << 16);
+	x = (x & mask1) + ((x >> 1) & mask1);
+	x = (x & mask2) + ((x >> 2) & mask2);
+        x = (x & mask3) + ((x >> 4) & mask3);
+	x = x + (x >> 8);
+	x = x + (x >> 16);
 	
 	return x & 0x3f;
 }
@@ -307,7 +299,8 @@ int ilog2(int x) {
  */
 unsigned float_neg(unsigned uf) {
 	unsigned result = uf ^ (1 << 31);
-	if((uf & ((1 << 31) - 1)) > (0xff << 23)){
+	int tmp = 0xff << 23;
+	if((uf & (tmp|(0xff << 15)|(0xff << 7)|0xff)) > tmp){
 		result = uf;
 	}	
 	return result;
@@ -322,32 +315,39 @@ unsigned float_neg(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-	int sign = x & (1 << 31);
+	int first1 = 31;
+	int frac = 0;
+	int flag = 0;
+	unsigned tmp = 0;  
+	int exp = 0;
+	int mask = (0xff << 15)|(0xff << 7)|(0x7f);
+	int mask1 = 1 << 31;
+	int sign = x & mask1;
 	if(x < 0){
 		x = -x;
 	}
-	int first1 = 31;
-	while(first1 >= 0 && (((x >> first1) & 0x1) != 0x1) ){
-		first1--;
-	}
-	if(first1 == -1)
-		return 0;	
-	int frac = 0;
-	int flag = 0;
-	if(first1 > 23){
-		frac = ((x >> (first1 - 23)) & ((0xff << 15)|(0xff << 7)|(0x7f)));
-		unsigned tmp = x << (55 - first1);
-		if(tmp > (1 << 31))
-			flag = 1;
-		else if(tmp == (1 << 31)){
-			if((frac & 0x1) == 0x1)
+	if(x == 0)
+		return 0;
+	
+	if(x > 0){
+		while(!(x >> first1)){
+			first1 = first1 - 1;
+		}	
+		if(first1 > 23){
+			frac = (x >> (first1 - 23)) & mask;
+			tmp = x << (55 - first1);
+			if(tmp > mask1)
 				flag = 1;
+			else if(tmp == mask1){
+				if(frac & 0x1)
+					flag = 1;
+			}
+		}
+		else{
+			frac = (x << (23 - first1)) & mask;
 		}
 	}
-	else{
-		frac = (x << (23 - first1)) & ((0xff << 15)|(0xff << 7)|(0x7f));
-	}
-	int exp = 127 + first1;
+	exp = 127 + first1;
 	return sign + (exp << 23) + frac + flag;
 }
 /* 
