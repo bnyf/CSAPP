@@ -1,2 +1,1 @@
-This repository is the solution of the CSAPP lab.   
-Lab1: http://www.yufengli.cn/2018/06/06/csapp-lab1/
+This repository is the solution of the CSAPP lab. And you can get the toturials in http://www.yufengli.cn.  
