@@ -1,0 +1,2 @@
+popq %rdi
+ret
