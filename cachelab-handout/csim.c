@@ -3,22 +3,25 @@
 #include <string.h>
 #include <unistd.h>
 #define MAX_FILENAME_LENGTH 4096
+
+int replace_cacheline(int set_idx);
+
 int hit_count, miss_count, eviction_count;
 
 int S,E,B;
 char fileName[MAX_FILENAME_LENGTH];
-bool h,v;
+int h,v;
 int line_num;
 
 void init(){
-    s = E = b = 0;
-    memeset(fileName,0,sizeof(fileName));
-    h = v = false;
+    S = E = B = 0;
+    memset(fileName,0,sizeof(fileName));
+    h = v = 0;
     hit_count = miss_count = eviction_count = 0;
 }
 
 struct Cache_line{
-    bool vis;
+    int vis;
     int flag;
 };
 struct Cache_line *cache_line;
@@ -29,9 +32,10 @@ struct LRU_node{
 };
 struct LRU_node **lru_node;
 int *LRU_node_num;
+
 int find_idle_cacheline(int flag, int set_idx){
-    int line_idx_start = set_idx * K;
-    int line_idx_end = line_idx_start + K;
+    int line_idx_start = set_idx * E;
+    int line_idx_end = line_idx_start + E;
     for(int i=line_idx_start;i<line_idx_end;++i){
         if(cache_line[i].vis){
             if(cache_line[i].flag == flag){
@@ -43,7 +47,7 @@ int find_idle_cacheline(int flag, int set_idx){
     miss_count++;
     for(int i=line_idx_start;i<line_idx_end;++i){
         if(!cache_line[i].vis){
-            return i % K;
+            return i % E;
         }
     }
 
@@ -53,7 +57,7 @@ int find_idle_cacheline(int flag, int set_idx){
 int replace_cacheline(int set_idx){
     printf("eviction_count ");
     eviction_count++;
-    LRU_node *p = lru_node[set_idx];
+    struct LRU_node *p = lru_node[set_idx];
     struct LRU_node *res = p->next;
     p->next = res->next;
     while(p->next->next != NULL){
@@ -66,7 +70,7 @@ int replace_cacheline(int set_idx){
 
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
-    cache_line[line_idx_in_cache].vis = true;
+    cache_line[line_idx_in_cache].vis = 1; 
     cache_line[line_idx_in_cache].flag = flag;
 
     struct LRU_node *p = lru_node[set_index];
@@ -74,7 +78,7 @@ void use_cacheline(int flag, int line_idx_in_set, int set_idx){
         p = p->next;
     }
     p->next = malloc(sizeof(struct LRU_node));
-    struct LRU_node temp = p->next;
+    struct LRU_node *temp = p->next;
     temp.next = NULL;
     temp.idx = line_idx_in_set;
 }
@@ -132,12 +136,12 @@ int main(int argc, char * argv[])
     char ch;
     int s,b;
     while((ch = getopt(argc, argv ,"hvs:E:b:t:"))){
-        witch(ch) {
+        switch(ch) {
             case 'h':
-                h = true;
+                h = 1;
                 break;
             case 'v':
-                v = true;
+                v = 1;
                 break;
             case 's':
                 s = atoi(optarg);
