@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <math.h>
+#include <>
 #define MAX_FILENAME_LENGTH 4096
 
 int replace_cacheline(int set_idx);
@@ -55,17 +58,18 @@ int find_idle_cacheline(int flag, int set_idx){
 }
 
 int replace_cacheline(int set_idx){
-    printf("eviction_count ");
+    printf(" eviction_count");
     eviction_count++;
     struct LRU_node *p = lru_node[set_idx];
-    struct LRU_node *res = p->next;
-    p->next = res->next;
-    while(p->next->next != NULL){
-        p = p->next;
-    }
-    delete(p->next);
+    struct LRU_node *temp = p->next;
+    p->next = temp->next;
+    // while(p->next->next != NULL){
+    //     p = p->next;
+    // }
+    int res = temp->idx;
+    free(temp);
     p->next = NULL;
-    return temp->idx;
+    return res;
 }
 
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
@@ -73,14 +77,14 @@ void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     cache_line[line_idx_in_cache].vis = 1; 
     cache_line[line_idx_in_cache].flag = flag;
 
-    struct LRU_node *p = lru_node[set_index];
+    struct LRU_node *p = lru_node[set_idx];
     while(p->next){
         p = p->next;
     }
     p->next = malloc(sizeof(struct LRU_node));
     struct LRU_node *temp = p->next;
-    temp.next = NULL;
-    temp.idx = line_idx_in_set;
+    temp->next = NULL;
+    temp->idx = line_idx_in_set;
 }
 
 void cache(char c, int addr, int size){
@@ -176,7 +180,7 @@ int main(int argc, char * argv[])
     while(fscanf(fileName,"%s %x,%d",c,addr,size) != EOF){
         cache(c, addr, size);
     }
-    delete(sizeof(struct Cache_line) * line_num);
+    free(sizeof(struct Cache_line) * line_num);
 
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
