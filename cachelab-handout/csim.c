@@ -4,11 +4,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <math.h>
-#include <>
+
 #define MAX_FILENAME_LENGTH 4096
 
 int replace_cacheline(int set_idx);
-
+extern char *optarg;
+extern int optind, opterr, optopt;
 int hit_count, miss_count, eviction_count;
 
 int S,E,B;
@@ -63,15 +64,22 @@ int replace_cacheline(int set_idx){
     struct LRU_node *p = lru_node[set_idx];
     struct LRU_node *temp = p->next;
     p->next = temp->next;
-    // while(p->next->next != NULL){
-    //     p = p->next;
-    // }
     int res = temp->idx;
     free(temp);
     p->next = NULL;
     return res;
 }
-
+void clear(){
+    for(int i=0;i<S;++i){
+        struct LRU_node *p = lru_node[i];
+        struct LRU_node *temp = p;
+        while(p){
+            p = p->next;
+            free(temp);
+            temp = p;
+        }
+    }
+}
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
     cache_line[line_idx_in_cache].vis = 1; 
@@ -167,20 +175,22 @@ int main(int argc, char * argv[])
         "-s <s>: Number of set index bits (S = 2s is the number of sets)\n" \
         "-E <E>: Associativity (number of lines per set)\n" \
         "-b <b>: Number of block bits (B = 2b is the block size)\n" \
-        "-t <tracefile>: Name of the valgrind trace to replay\n"
+        "-t <tracefile>: Name of the valgrind trace to replay\n");
     }
     S = pow(2,s);
     B = pow(2,b);
-    line_num = S * B;
+    line_num = S * E;
     cache_line = malloc(sizeof(struct Cache_line) * line_num);
     lru_node = malloc(sizeof(struct LRU_node*) * S);
-    lru_node_num = malloc(sizeof(int) * S);
+
     char c[2];
-    int addr,size;
-    while(fscanf(fileName,"%s %x,%d",c,addr,size) != EOF){
-        cache(c, addr, size);
+    unsigned int addr,size;
+    stream = fopen(fileName, "w+");
+    while(fscanf(stream,"%s %x,%d",c,&ddr,&size) != EOF){
+        cache(c[0], addr, size);
     }
-    free(sizeof(struct Cache_line) * line_num);
+    free(cache_line);
+    free(lru_node)
 
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
