@@ -186,7 +186,7 @@ int main(int argc, char * argv[])
     char c[2];
     unsigned int addr,size;
     stream = fopen(fileName, "w+");
-    while(fscanf(stream,"%s %x,%d",c,&ddr,&size) != EOF){
+    while(fscanf(stream,"%s %x,%d",c,&addr,&size) != EOF){
         cache(c[0], addr, size);
     }
     free(cache_line);
