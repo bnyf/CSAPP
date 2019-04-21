@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
 
     char ch;
     int s,b;
-    while((ch = getenv(argc, argv ,"hvs:E:b:t:"))){
+    while((ch = getopt(argc, argv ,"hvs:E:b:t:"))){
         switch(ch) {
             case 'h':
                 h = 1;
