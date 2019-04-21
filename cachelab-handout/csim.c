@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <math.h>
+#include <getopt.h>
 
 #define MAX_FILENAME_LENGTH 4096
 
@@ -147,7 +148,7 @@ int main(int argc, char * argv[])
 
     char ch;
     int s,b;
-    while((ch = getopt(argc, argv ,"hvs:E:b:t:"))){
+    while((ch = getenv(argc, argv ,"hvs:E:b:t:"))){
         switch(ch) {
             case 'h':
                 h = 1;
@@ -185,7 +186,7 @@ int main(int argc, char * argv[])
 
     char c[2];
     unsigned int addr,size;
-    File* stream = fopen(fileName, "w+");
+    FILE* stream = fopen(fileName, "w+");
     while(fscanf(stream,"%s %x,%d",c,&addr,&size) != EOF){
         cache(c[0], addr, size);
     }
