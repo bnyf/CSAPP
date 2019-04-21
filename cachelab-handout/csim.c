@@ -185,12 +185,12 @@ int main(int argc, char * argv[])
 
     char c[2];
     unsigned int addr,size;
-    stream = fopen(fileName, "w+");
+    File* stream = fopen(fileName, "w+");
     while(fscanf(stream,"%s %x,%d",c,&addr,&size) != EOF){
         cache(c[0], addr, size);
     }
     free(cache_line);
-    free(lru_node)
+    free(lru_node);
 
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
