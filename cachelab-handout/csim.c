@@ -16,7 +16,8 @@ int hit_count, miss_count, eviction_count;
 int S,E,B;
 char fileName[MAX_FILENAME_LENGTH];
 int h,v;
-int line_num;
+int line_num; //行总数
+int HIT; //是否命中
 
 void init(){
     S = E = B = 0;
@@ -26,43 +27,62 @@ void init(){
 }
 
 struct Cache_line{
-    int vis;
-    int flag;
+    int vis; //有效
+    int flag; //标记
 };
 struct Cache_line *cache_line;
 
 struct LRU_node{
     struct LRU_node *next;
-    int idx;
+    int idx;//组内行的下标
 };
-struct LRU_node **lru_node;
+struct LRU_node **lru_root_node;
 int *LRU_node_num;
 
-int find_idle_cacheline(int flag, int set_idx){
+int find_cacheline(int flag, int set_idx){
     int line_idx_start = set_idx * E;
     int line_idx_end = line_idx_start + E;
     for(int i=line_idx_start;i<line_idx_end;++i){
-        if(cache_line[i].vis){
+        if(HIT == 1)
+            break;
+        if(cache_line[i].vis > 0){
             if(cache_line[i].flag == flag){
                 hit_count++;
-                return -1;
+                HIT = 1;
+                struct LRU_node *p = lru_root_node[set_idx];
+                while(p->next){
+                    struct LRU_node *temp = p->next;
+                    if(temp->idx == (i % E)){
+                        temp = temp->next;
+                        free(p->next);
+                        p->next = temp;
+                        p = p->next;
+                        break;
+                    }
+                    p = p->next;
+                }
+                cache_line[i].vis = 0;
+                cache_line[i].flag = 0;
             }
         }
     }
-    miss_count++;
+    if(HIT == 0){
+        miss_count++;
+    }
+
     for(int i=line_idx_start;i<line_idx_end;++i){
         if(!cache_line[i].vis){
-            return i % E;
+            return i % E; //返回组内空行下标
         }
     }
 
-    return replace_cacheline(set_idx);
+    return replace_cacheline(set_idx); //未命中并返回替换后的组内空行下标
 }
 
 int replace_cacheline(int set_idx){
     printf(" eviction_count");
     eviction_count++;
-    struct LRU_node *p = lru_node[set_idx];
+    struct LRU_node *p = lru_root_node[set_idx];
     struct LRU_node *temp = p->next;
     p->next = temp->next;
     int res = temp->idx;
@@ -70,9 +90,10 @@ int replace_cacheline(int set_idx){
     p->next = NULL;
     return res;
 }
+
 void clear(){
     for(int i=0;i<S;++i){
-        struct LRU_node *p = lru_node[i];
+        struct LRU_node *p = lru_root_node[i];
         struct LRU_node *temp = p;
         while(p){
             p = p->next;
@@ -80,13 +101,15 @@ void clear(){
             temp = p;
         }
     }
+    free(cache_line);
+    free(lru_root_node)
 }
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
     cache_line[line_idx_in_cache].vis = 1; 
     cache_line[line_idx_in_cache].flag = flag;
 
-    struct LRU_node *p = lru_node[set_idx];
+    struct LRU_node *p = lru_root_node[set_idx];
     while(p->next){
         p = p->next;
     }
@@ -96,10 +119,11 @@ void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     temp->idx = line_idx_in_set;
 }
 
-void cache(char c, int addr, int size){
+void cache(char c, int addr){
     int set_idx = addr / B % S;
-    int flag = addr / B /S;
-    int line_idx_in_set = find_idle_cacheline(flag,set_idx);
+    int flag = addr / B / S;
+    int line_idx_in_set = find_cacheline(flag,set_idx);
+    HIT = 0;
     if(v == 1){
         printf("%c %x,%d ",c,addr,size);
     }
@@ -107,47 +131,49 @@ void cache(char c, int addr, int size){
         case 'I':
             break;
         case 'M':
-            if(line_idx_in_set > 0){
+            if(HIT == 0)
                 printf(" miss");
-                use_cacheline(flag, line_idx_in_set, set_idx);
-            }
-            else{
+            else
                 printf(" hit"); 
-            }
+
+            use_cacheline(flag, line_idx_in_set, set_idx);
+                
             printf("hit\n");
             hit_count++;
             break;
         case 'L':
-            if(line_idx_in_set > 0){
-                printf(" miss");   
-                use_cacheline(flag, line_idx_in_set, set_idx);
-            }
-            else{
-                printf(" hit");
-            }
-            printf("\n");
+            if(HIT == 0)
+                printf(" miss");
+            else
+                printf(" hit"); 
+ 
+            use_cacheline(flag, line_idx_in_set, set_idx);
 
+            printf("\n");
             break;
         case 'S':
-            if(line_idx_in_set > 0){
+            if(HIT == 0)
                 printf(" miss");
-                use_cacheline(flag, line_idx_in_set, set_idx);
-            }
-            else{
-                printf(" hit");
-            }
-            printf("\n");
+            else
+                printf(" hit"); 
+ 
+            use_cacheline(flag, line_idx_in_set, set_idx);
 
+            printf("\n");
             break;
     }
+}
+
+printSummary(hit_count, miss_count, eviction_count){
+    pritnf("hits:%d misses:%d evictions:%d\n",hit_count,miss_count,eviction_count);
 }
 
 int main(int argc, char * argv[])
 {
     init();
-
     char ch;
-    int s,b;
+    int s; //set bits
+    int b; //block bits 
     while((ch = getopt(argc, argv ,"hvs:E:b:t:"))){
         switch(ch) {
             case 'h':
@@ -182,17 +208,15 @@ int main(int argc, char * argv[])
     B = pow(2,b);
     line_num = S * E;
     cache_line = malloc(sizeof(struct Cache_line) * line_num);
-    lru_node = malloc(sizeof(struct LRU_node*) * S);
+    lru_root_node = malloc(sizeof(struct LRU_node*) * S);
 
     char c[2];
     unsigned int addr,size;
     FILE* stream = fopen(fileName, "w+");
     while(fscanf(stream,"%s %x,%d",c,&addr,&size) != EOF){
-        cache(c[0], addr, size);
+        cache(c[0], addr);
     }
-    free(cache_line);
-    free(lru_node);
-
+    clear();
     printSummary(hit_count, miss_count, eviction_count);
     return 0;
 }
