@@ -79,7 +79,7 @@ int find_cacheline(int flag, int set_idx){
 }
 
 int replace_cacheline(int set_idx){
-    printf(" eviction_count");
+    // printf(" eviction_count");
     eviction_count++;
     EVICTION = 1;
     struct LRU_node *p = lru_root_node[set_idx];
@@ -105,23 +105,23 @@ void clear(){
     free(lru_root_node);
 }
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
-    printf("begin use cacheline\n");
+    // printf("begin use cacheline\n");
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
     cache_line[line_idx_in_cache].vis = 1; 
     cache_line[line_idx_in_cache].flag = flag;
 
     struct LRU_node *p = lru_root_node[set_idx];
-    printf("begin append LRU node\n");
-    printf("idx:%d\n",p->idx);
+    // printf("begin append LRU node\n");
+    // printf("idx:%d\n",p->idx);
     while(p->next){
         p = p->next;
     }
-    printf("finish append\n");
+    // printf("finish append\n");
     p->next = malloc(sizeof(struct LRU_node));
     struct LRU_node *temp = p->next;
     temp->next = NULL;
     temp->idx = line_idx_in_set;
-    printf("end use cacheline\n");
+    // printf("end use cacheline\n");
 }
 
 void cache(char c, int addr, int size){
@@ -130,9 +130,9 @@ void cache(char c, int addr, int size){
     int set_idx = (addr / B) % S;
     int flag = addr / B / S;
     int line_idx_in_set = find_cacheline(flag,set_idx);
-    printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
+    // printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
-        printf("%c %x,%d ",c,addr,size);
+        // printf("%c %x,%d ",c,addr,size);
     }
     switch(c){
         case 'I':
@@ -168,19 +168,19 @@ void cache(char c, int addr, int size){
 
 int main(int argc, char * argv[])
 {
-    printf("start main func\n");
+    // printf("start main func\n");
     init();
     char ch;
     int s; //set bits
     int b; //block bits 
-    printf("start getopt\n");
+    // printf("start getopt\n");
     while((ch = getopt(argc, argv ,"hvs:E:b:t:")) != EOF){
         switch(ch) {
             case 'h':
                 h = 1;
                 break;
             case 'v':
-		printf("v = 1\n");
+		// printf("v = 1\n");
                 v = 1;
                 break;
             case 's':
@@ -193,7 +193,7 @@ int main(int argc, char * argv[])
                 b = atoi(optarg);
                 break;
             case 't':
-		printf("t = 1\n");
+		// printf("t = 1\n");
                 memcpy(fileName,optarg,sizeof(optarg)+1);
 		//printf("finish copy filename\n");
             	break;
@@ -201,7 +201,7 @@ int main(int argc, char * argv[])
 		break;
         }
     }
-    printf("h:%d v:%d s:%d E:%d b:%d t:%s\n",h,v,s,E,b,fileName);
+    // printf("h:%d v:%d s:%d E:%d b:%d t:%s\n",h,v,s,E,b,fileName);
     if(h == 1){
         printf("-h: Optional help flag that prints usage info\n" \
         "-v: Optional verbose flag that displays trace info\n" \
@@ -212,7 +212,7 @@ int main(int argc, char * argv[])
     }
     S = pow(2,s);
     B = pow(2,b);
-    printf("S:%d, B:%d\n",S,B);
+    // printf("S:%d, B:%d\n",S,B);
     line_num = S * E;
     cache_line = malloc(sizeof(struct Cache_line) * line_num);
     lru_root_node = malloc(sizeof(struct LRU_node*) * S);
@@ -225,7 +225,7 @@ int main(int argc, char * argv[])
     FILE* stream = fopen(fileName, "r");
     printf("begin read from %s\n",fileName);
     while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
-	printf("c:%s, addr:%x, size:%d\n",c,addr,size);
+	// printf("c:%s, addr:%x, size:%d\n",c,addr,size);
         cache(c[0], addr, size);
     }
     clear();
