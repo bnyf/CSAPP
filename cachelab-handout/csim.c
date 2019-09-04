@@ -18,7 +18,7 @@ char fileName[MAX_FILENAME_LENGTH];
 int h,v;
 int line_num; //行总数
 int HIT; //是否命中
-
+int EVICTION;//是否替换
 void init(){
     S = E = B = 0;
     memset(fileName,0,sizeof(fileName));
@@ -37,7 +37,6 @@ struct LRU_node{
     int idx;//组内行的下标
 };
 struct LRU_node **lru_root_node;
-int *LRU_node_num;
 
 int find_cacheline(int flag, int set_idx){
     int line_idx_start = set_idx * E;
@@ -71,7 +70,7 @@ int find_cacheline(int flag, int set_idx){
     }
 
     for(int i=line_idx_start;i<line_idx_end;++i){
-        if(!cache_line[i].vis){
+        if(cache_line[i].vis == 0){
             return i % E; //返回组内空行下标
         }
     }
@@ -82,6 +81,7 @@ int find_cacheline(int flag, int set_idx){
 int replace_cacheline(int set_idx){
     printf(" eviction_count");
     eviction_count++;
+    EVICTION = 1;
     struct LRU_node *p = lru_root_node[set_idx];
     struct LRU_node *temp = p->next;
     p->next = temp->next;
@@ -102,28 +102,35 @@ void clear(){
         }
     }
     free(cache_line);
-    free(lru_root_node)
+    free(lru_root_node);
 }
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
+    printf("begin use cacheline\n");
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
     cache_line[line_idx_in_cache].vis = 1; 
     cache_line[line_idx_in_cache].flag = flag;
 
     struct LRU_node *p = lru_root_node[set_idx];
+    printf("begin append LRU node\n");
+    printf("idx:%d\n",p->idx);
     while(p->next){
         p = p->next;
     }
+    printf("finish append\n");
     p->next = malloc(sizeof(struct LRU_node));
     struct LRU_node *temp = p->next;
     temp->next = NULL;
     temp->idx = line_idx_in_set;
+    printf("end use cacheline\n");
 }
 
-void cache(char c, int addr){
-    int set_idx = addr / B % S;
+void cache(char c, int addr, int size){
+    HIT = 0;
+    EVICTION = 0;
+    int set_idx = (addr / B) % S;
     int flag = addr / B / S;
     int line_idx_in_set = find_cacheline(flag,set_idx);
-    HIT = 0;
+    printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
         printf("%c %x,%d ",c,addr,size);
     }
@@ -136,50 +143,44 @@ void cache(char c, int addr){
             else
                 printf(" hit"); 
 
+	    if(EVICTION == 1)
+		printf(" eviction");
             use_cacheline(flag, line_idx_in_set, set_idx);
                 
             printf("hit\n");
             hit_count++;
             break;
         case 'L':
-            if(HIT == 0)
-                printf(" miss");
-            else
-                printf(" hit"); 
- 
-            use_cacheline(flag, line_idx_in_set, set_idx);
-
-            printf("\n");
-            break;
         case 'S':
             if(HIT == 0)
                 printf(" miss");
             else
                 printf(" hit"); 
- 
+ 	    if(EVICTION == 1)
+		printf(" eviction");
+	    printf("\n"); 
             use_cacheline(flag, line_idx_in_set, set_idx);
-
-            printf("\n");
             break;
+	default:
+	    break;
     }
-}
-
-printSummary(hit_count, miss_count, eviction_count){
-    pritnf("hits:%d misses:%d evictions:%d\n",hit_count,miss_count,eviction_count);
 }
 
 int main(int argc, char * argv[])
 {
+    printf("start main func\n");
     init();
     char ch;
     int s; //set bits
     int b; //block bits 
-    while((ch = getopt(argc, argv ,"hvs:E:b:t:"))){
+    printf("start getopt\n");
+    while((ch = getopt(argc, argv ,"hvs:E:b:t:")) != EOF){
         switch(ch) {
             case 'h':
                 h = 1;
                 break;
             case 'v':
+		printf("v = 1\n");
                 v = 1;
                 break;
             case 's':
@@ -192,10 +193,15 @@ int main(int argc, char * argv[])
                 b = atoi(optarg);
                 break;
             case 't':
+		printf("t = 1\n");
                 memcpy(fileName,optarg,sizeof(optarg)+1);
-                break;
+		//printf("finish copy filename\n");
+            	break;
+	    case '?':
+		break;
         }
     }
+    printf("h:%d v:%d s:%d E:%d b:%d t:%s\n",h,v,s,E,b,fileName);
     if(h == 1){
         printf("-h: Optional help flag that prints usage info\n" \
         "-v: Optional verbose flag that displays trace info\n" \
@@ -206,15 +212,21 @@ int main(int argc, char * argv[])
     }
     S = pow(2,s);
     B = pow(2,b);
+    printf("S:%d, B:%d\n",S,B);
     line_num = S * E;
     cache_line = malloc(sizeof(struct Cache_line) * line_num);
     lru_root_node = malloc(sizeof(struct LRU_node*) * S);
+    for(int i=0;i<S;++i){
+    	lru_root_node[i] = malloc(sizeof(struct LRU_node*));
+    }
 
     char c[2];
     unsigned int addr,size;
-    FILE* stream = fopen(fileName, "w+");
-    while(fscanf(stream,"%s %x,%d",c,&addr,&size) != EOF){
-        cache(c[0], addr);
+    FILE* stream = fopen(fileName, "r");
+    printf("begin read from %s\n",fileName);
+    while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
+	printf("c:%s, addr:%x, size:%d\n",c,addr,size);
+        cache(c[0], addr, size);
     }
     clear();
     printSummary(hit_count, miss_count, eviction_count);
