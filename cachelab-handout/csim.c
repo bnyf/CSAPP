@@ -132,33 +132,40 @@ void cache(char c, int addr, int size){
     int line_idx_in_set = find_cacheline(flag,set_idx);
     // printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
-        // printf("%c %x,%d ",c,addr,size);
+         printf("%c %x,%d ",c,addr,size);
     }
     switch(c){
         case 'I':
             break;
         case 'M':
-            if(HIT == 0)
-                printf(" miss");
-            else
-                printf(" hit"); 
+            if(v == 1){
 
-	    if(EVICTION == 1)
-		printf(" eviction");
+	    	if(HIT == 0)
+                    printf(" miss");
+            	else
+                    printf(" hit"); 
+
+	        if(EVICTION == 1)
+		    printf(" eviction");
+                printf(" hit\n");
+	    }
+
             use_cacheline(flag, line_idx_in_set, set_idx);
-                
-            printf("hit\n");
             hit_count++;
             break;
         case 'L':
         case 'S':
-            if(HIT == 0)
-                printf(" miss");
-            else
-                printf(" hit"); 
- 	    if(EVICTION == 1)
-		printf(" eviction");
-	    printf("\n"); 
+	    if(v == 1){
+
+                if(HIT == 0)
+                    printf(" miss");
+                else
+                    printf(" hit"); 
+ 	        if(EVICTION == 1)
+		    printf(" eviction");
+	        printf("\n"); 
+	    }
+    
             use_cacheline(flag, line_idx_in_set, set_idx);
             break;
 	default:
@@ -194,7 +201,7 @@ int main(int argc, char * argv[])
                 break;
             case 't':
 		// printf("t = 1\n");
-                memcpy(fileName,optarg,sizeof(optarg)+1);
+                memcpy(fileName,optarg,strlen(optarg)+1);
 		//printf("finish copy filename\n");
             	break;
 	    case '?':
@@ -223,7 +230,7 @@ int main(int argc, char * argv[])
     char c[2];
     unsigned int addr,size;
     FILE* stream = fopen(fileName, "r");
-    printf("begin read from %s\n",fileName);
+//    printf("begin read from %s\n",fileName);
     while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
 	// printf("c:%s, addr:%x, size:%d\n",c,addr,size);
         cache(c[0], addr, size);
