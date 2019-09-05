@@ -132,7 +132,7 @@ void cache(char c, unsigned long long addr, int size){
     int line_idx_in_set = find_cacheline(flag,set_idx);
     // printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
-         printf("%c %x,%d ",c,addr,size);
+         printf("%c %llx,%d ",c,addr,size);
     }
     switch(c){
         case 'M':
@@ -230,8 +230,8 @@ int main(int argc, char * argv[])
     int size;
     FILE* stream = fopen(fileName, "r");
 //    printf("begin read from %s\n",fileName);
-    while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
-	// printf("c:%s, addr:%x, size:%d\n",c,addr,size);
+    while(fscanf(stream," %s %llx,%d",c,&addr,&size) != EOF){
+	// printf("c:%s, addr:%llx, size:%d\n",c,addr,size);
 	if(c[0] != 'I')
         	cache(c[0], addr, size);
     }
