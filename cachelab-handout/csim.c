@@ -135,8 +135,6 @@ void cache(char c, int addr, int size){
          printf("%c %x,%d ",c,addr,size);
     }
     switch(c){
-        case 'I':
-            break;
         case 'M':
             if(v == 1){
 
@@ -233,7 +231,8 @@ int main(int argc, char * argv[])
 //    printf("begin read from %s\n",fileName);
     while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
 	// printf("c:%s, addr:%x, size:%d\n",c,addr,size);
-        cache(c[0], addr, size);
+	if(c[0] != 'I')
+        	cache(c[0], addr, size);
     }
     clear();
     printSummary(hit_count, miss_count, eviction_count);
