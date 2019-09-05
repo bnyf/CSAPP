@@ -22,6 +22,43 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    int out_i = 0;
+    int out_j = 0;
+    int in_i = 0;
+    int in_j = 0;
+    for(out_i=0;(out_i+4)<N;out_i+=4){
+        //N>=4,M>=4
+        for(out_j=0;(out_j+4)<M;out_j+=4){
+            for(in_i=0;in_i<4;++in_i){
+                for(in_j=0;in_j<4;++in_j){
+                    B[out_i+in_j][out_j+in_i] = A[out_i+in_i][out_j+in_j];
+                }
+            }
+        }
+
+        //N>=4,M<4   
+        for(in_i=0;in_i<4;++in_i){
+            for(in_j=0;in_j<M%4;++in_j){
+                B[out_i+in_j][out_j+in_i] = A[out_i+in_i][out_j+in_j];
+            }
+        }    
+    }
+
+    //N<4,M>=4
+    for(out_j=0;(out_j+4)<M;out_j+=4){
+        for(in_i=0;in_i<N%4;++in_i){
+            for(in_j=0;in_j<4;++in_j){
+                B[out_i+in_j][out_j+in_i] = A[out_i+in_i][out_j+in_j];
+            }
+        }
+    }
+
+    //N<4,M<4
+    for(in_i=0;in_i<N%4;++in_i){
+        for(in_j=0;in_j<M%4;++in_j){
+            B[out_i+in_j][out_j+in_i] = A[out_i+in_i][out_j+in_j];
+        }
+    }
 }
 
 /* 
