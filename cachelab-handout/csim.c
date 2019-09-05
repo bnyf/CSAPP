@@ -124,7 +124,7 @@ void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     // printf("end use cacheline\n");
 }
 
-void cache(char c, int addr, int size){
+void cache(char c, unsigned long long addr, int size){
     HIT = 0;
     EVICTION = 0;
     int set_idx = (addr / B) % S;
@@ -226,7 +226,8 @@ int main(int argc, char * argv[])
     }
 
     char c[2];
-    unsigned int addr,size;
+    unsigned long long addr;
+    int size;
     FILE* stream = fopen(fileName, "r");
 //    printf("begin read from %s\n",fileName);
     while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
