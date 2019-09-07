@@ -41,30 +41,29 @@ struct LRU_node **lru_root_node;
 int find_cacheline(int flag, int set_idx){
     int line_idx_start = set_idx * E;
     int line_idx_end = line_idx_start + E;
-    for(int i=line_idx_start;i<line_idx_end;++i){
-        if(HIT == 1)
-            break;
+    for(int i=line_idx_start;i<line_idx_end && HIT != 1;++i){
         if(cache_line[i].vis > 0){
             if(cache_line[i].flag == flag){
                 hit_count++;
                 HIT = 1;
                 struct LRU_node *p = lru_root_node[set_idx];
+                
+                //在LRU中去掉该命中节点
                 while(p->next){
                     struct LRU_node *temp = p->next;
                     if(temp->idx == (i % E)){
                         temp = temp->next;
                         free(p->next);
                         p->next = temp;
-                        p = p->next;
-                        break;
+                        return i % E;
                     }
                     p = p->next;
                 }
-                cache_line[i].vis = 0;
-                cache_line[i].flag = 0;
             }
         }
     }
+
+
     if(HIT == 0){
         miss_count++;
     }
@@ -78,6 +77,7 @@ int find_cacheline(int flag, int set_idx){
     return replace_cacheline(set_idx); //未命中并返回替换后的组内空行下标
 }
 
+//返回替换掉的 cacheline 的组内行数，并更新 LRU
 int replace_cacheline(int set_idx){
     // printf(" eviction_count");
     eviction_count++;
@@ -88,6 +88,9 @@ int replace_cacheline(int set_idx){
     int res = temp->idx;
     free(temp);
     p->next = NULL;
+    int line_idx_in_cache = line_idx_in_set + set_idx * E;
+    cache_line[line_idx_in_cache].vis = 1; 
+    
     return res;
 }
 
@@ -104,6 +107,8 @@ void clear(){
     free(cache_line);
     free(lru_root_node);
 }
+
+//使用该 cacheline，并在 LRU 中进行更新
 void use_cacheline(int flag, int line_idx_in_set, int set_idx){
     // printf("begin use cacheline\n");
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
@@ -129,38 +134,37 @@ void cache(char c, unsigned long long addr, int size){
     EVICTION = 0;
     int set_idx = (addr / B) % S;
     int flag = addr / B / S;
-    int line_idx_in_set = find_cacheline(flag,set_idx);
+    int line_idx_in_set = find_cacheline(flag,set_idx);//获取本次存取在cache中的行数
     // printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
-         printf("%c %x,%d ",c,addr,size);
+         printf("%c %x,%d",c,addr,size);
     }
     switch(c){
         case 'M':
             if(v == 1){
 
-	    	if(HIT == 0)
-                    printf(" miss");
-            	else
-                    printf(" hit"); 
-
-	        if(EVICTION == 1)
-		    printf(" eviction");
-                printf(" hit\n");
-	    }
-
-            use_cacheline(flag, line_idx_in_set, set_idx);
-            hit_count++;
-            break;
-        case 'L':
-        case 'S':
-	    if(v == 1){
-
                 if(HIT == 0)
                     printf(" miss");
                 else
                     printf(" hit"); 
+
+                if(EVICTION == 1)
+                printf(" eviction");
+                    printf(" hit\n");
+            }
+
+            use_cacheline(flag, line_idx_in_set, set_idx);
+            hit_count++;
+        break;
+        case 'L':
+        case 'S':
+	    if(v == 1){
+            if(HIT == 0)
+                printf(" miss");
+            else
+                printf(" hit"); 
  	        if(EVICTION == 1)
-		    printf(" eviction");
+		        printf(" eviction");
 	        printf("\n"); 
 	    }
     
