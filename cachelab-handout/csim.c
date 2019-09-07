@@ -28,7 +28,7 @@ void init(){
 
 struct Cache_line{
     int vis; //有效
-    int flag; //标记
+    unsigned long long flag; //标记
 };
 struct Cache_line *cache_line;
 
@@ -38,10 +38,10 @@ struct LRU_node{
 };
 struct LRU_node **lru_root_node;
 
-int find_cacheline(int flag, int set_idx){
+int find_cacheline(unsigned long long flag, int set_idx){
     int line_idx_start = set_idx * E;
     int line_idx_end = line_idx_start + E;
-    for(int i=line_idx_start;i<line_idx_end && HIT != 1;++i){
+    for(int i=line_idx_start;i<line_idx_end;++i){
         if(cache_line[i].vis > 0){
             if(cache_line[i].flag == flag){
                 hit_count++;
@@ -51,7 +51,7 @@ int find_cacheline(int flag, int set_idx){
                 //在LRU中去掉该命中节点
                 while(p->next){
                     struct LRU_node *temp = p->next;
-                    if(temp->idx == (i % E)){
+                    if((temp->idx) == (i % E)){
                         temp = temp->next;
                         free(p->next);
                         p->next = temp;
@@ -59,14 +59,12 @@ int find_cacheline(int flag, int set_idx){
                     }
                     p = p->next;
                 }
+		//printf("error\n");
             }
         }
     }
 
-
-    if(HIT == 0){
-        miss_count++;
-    }
+    miss_count++;
 
     for(int i=line_idx_start;i<line_idx_end;++i){
         if(cache_line[i].vis == 0){
@@ -85,13 +83,10 @@ int replace_cacheline(int set_idx){
     struct LRU_node *p = lru_root_node[set_idx];
     struct LRU_node *temp = p->next;
     p->next = temp->next;
-    int res = temp->idx;
+    int line_idx_in_set = temp->idx;
     free(temp);
-    p->next = NULL;
-    int line_idx_in_cache = line_idx_in_set + set_idx * E;
-    cache_line[line_idx_in_cache].vis = 1; 
     
-    return res;
+    return line_idx_in_set;
 }
 
 void clear(){
@@ -109,7 +104,7 @@ void clear(){
 }
 
 //使用该 cacheline，并在 LRU 中进行更新
-void use_cacheline(int flag, int line_idx_in_set, int set_idx){
+void use_cacheline(unsigned long long flag, int line_idx_in_set, int set_idx){
     // printf("begin use cacheline\n");
     int line_idx_in_cache = line_idx_in_set + set_idx * E;
     cache_line[line_idx_in_cache].vis = 1; 
@@ -133,11 +128,11 @@ void cache(char c, unsigned long long addr, int size){
     HIT = 0;
     EVICTION = 0;
     int set_idx = (addr / B) % S;
-    int flag = addr / B / S;
+    unsigned long long flag = addr / B / S;
     int line_idx_in_set = find_cacheline(flag,set_idx);//获取本次存取在cache中的行数
     // printf("set_idx:%d, flag:%d, line_idx_in_set:%d, hit:%d, v:%d\n",set_idx, flag, line_idx_in_set, HIT, v);
     if(v == 1){
-         printf("%c %x,%d",c,addr,size);
+         printf("%c %llx,%d",c,addr,size);
     }
     switch(c){
         case 'M':
@@ -159,13 +154,15 @@ void cache(char c, unsigned long long addr, int size){
         case 'L':
         case 'S':
 	    if(v == 1){
-            if(HIT == 0)
-                printf(" miss");
-            else
-                printf(" hit"); 
- 	        if(EVICTION == 1)
-		        printf(" eviction");
-	        printf("\n"); 
+            	if(HIT == 0)
+                   printf(" miss");
+            	else
+                   printf(" hit"); 
+ 	         
+		if(EVICTION == 1)
+		   printf(" eviction");
+	        
+		printf("\n"); 
 	    }
     
             use_cacheline(flag, line_idx_in_set, set_idx);
@@ -234,7 +231,7 @@ int main(int argc, char * argv[])
     int size;
     FILE* stream = fopen(fileName, "r");
 //    printf("begin read from %s\n",fileName);
-    while(fscanf(stream," %s %x,%d",c,&addr,&size) != EOF){
+    while(fscanf(stream," %s %llx,%d",c,&addr,&size) != EOF){
 	// printf("c:%s, addr:%x, size:%d\n",c,addr,size);
 	if(c[0] != 'I')
         	cache(c[0], addr, size);
