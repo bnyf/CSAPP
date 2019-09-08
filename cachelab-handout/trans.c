@@ -86,6 +86,73 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
     }
 }
 
+char transpose_test_desc[] = "Transpose test";
+void transpose_test(int M, int N, int A[N][M], int B[M][N])
+{
+    int Block = 8;
+    int out_i = 0;
+    int out_j = 0;
+    int in_i = 0;
+    int in_j = 0;
+    int x,y = 0;
+    for(out_i=0;(out_i+Block)<=N;out_i+=Block){
+        //N>=Block,M>=Block
+        for(out_j=0;(out_j+Block)<=M;out_j+=Block){
+            for(in_i=0;in_i<Block;++in_i){
+                for(in_j=0;in_j<Block;++in_j){
+		    if(out_i + in_j == out_j + in_i){
+		    	x = out_i + in_j;
+			y = A[x][x];
+			continue;
+		    }
+                    B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+                }
+		B[x][x] = y;
+            }
+        }
+
+        //N>=Block,M<Block   
+        for(in_i=0;in_i<Block;++in_i){
+            for(in_j=0;in_j<M%Block;++in_j){
+		if(out_i + in_j == out_j + in_i){
+		    	x = out_i + in_j;
+			y = A[x][x];
+			continue;
+		}
+                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+            }
+	    B[x][x] = y;
+        }    
+    }
+
+    //N<Block,M>=Block
+    for(out_j=0;(out_j+Block)<=M;out_j+=Block){
+        for(in_i=0;in_i<N%Block;++in_i){
+            for(in_j=0;in_j<Block;++in_j){
+		if(out_i + in_j == out_j + in_i){
+		    	x = out_i + in_j;
+			y = A[x][x];
+			continue;
+		   }
+                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+            }
+	    B[x][x] = y;
+        }
+    }
+
+    //N<Block,M<Block
+    for(in_i=0;in_i<N%Block;++in_i){
+        for(in_j=0;in_j<M%Block;++in_j){
+		if(out_i + in_j == out_j + in_i){
+		    	x = out_i + in_j;
+			y = A[x][x];
+			continue;
+		    }
+            B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+        }
+    }
+}
+
 /* 
  * You can define additional transpose functions below. We've defined
  * a simple one below to help you get started. 
@@ -119,6 +186,7 @@ void registerFunctions()
 {
     /* Register your solution function */
     registerTransFunction(transpose_submit, transpose_submit_desc); 
+    registerTransFunction(transpose_test, transpose_test_desc); 
 
     /* Register any additional transpose functions */
     registerTransFunction(trans, trans_desc); 
