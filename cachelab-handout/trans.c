@@ -27,68 +27,74 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
     int in_i = 0;
     int in_j = 0;
     int temp[8];
-    temp[0] = -1;
     
     if(N == 32){
         for(out_i=0;out_i<N;out_i+=8){
-          for(out_j=0;out_j<M;out_j+=8){
-              for(in_i=0;in_i<8;++in_i){
-                  for(in_j=0;in_j<8;++in_j){
-	              temp[in_j] = A[out_i+in_i][out_j+in_j];
-                  }
-		  for(in_j=0;in_j<8;++in_j){
-	              B[out_j+in_j][out_i+in_i] = temp[in_j];
-                  }
-              }
-          }
-        }
-    }
-    else if(N == 64){
-        for(out_i=0;out_i<N;out_i+=4){
-          for(out_j=0;out_j<M;out_j+=4){
-              for(in_i=0;in_i<4;++in_i){
-                  for(in_j=0;in_j<4;++in_j){
-	              temp[in_j] = A[out_i+in_i][out_j+in_j];
-                  }
-		  for(in_j=0;in_j<4;++in_j){
-	              B[out_j+in_j][out_i+in_i] = temp[in_j];
-                  }
-
-              }
-          }
-        }
-    }
-    	
-}
-
-char transpose_test_desc[] = "Transpose test";
-void transpose_test(int M, int N, int A[N][M], int B[M][N])
-{
-    int Block = 32;
-    int out_i = 0;
-    int out_j = 0;
-    int in_i = 0;
-    int in_j = 0;
-    int y = 0;
-    int x = -1;
-    for(out_i=0;out_i<N;out_i+=Block){
-        for(out_j=0;out_j<M;out_j+=Block){
-            for(in_i=0;in_i<Block;++in_i){
-                for(in_j=0;in_j<Block;++in_j){
-		    if(out_i + in_i == out_j + in_j){
-		    	x = out_i + in_i;
-			y = A[x][x];
-			continue;
-		    }
-                    B[out_j+in_j][out_i+in_i] = A[out_i+in_i][out_j+in_j];
+            for(out_j=0;out_j<M;out_j+=8){
+                for(in_i=0;in_i<8;++in_i){
+                    for(in_j=0;in_j<8;++in_j){
+	                    temp[in_j] = A[out_i+in_i][out_j+in_j];
+                    }
+		            for(in_j=0;in_j<8;++in_j){
+	                    B[out_j+in_j][out_i+in_i] = temp[in_j];
+                    }
                 }
-		if(x >= 0){
-		    B[x][x] = y;
-		    x = -1;
-	        }
             }
         }
     }
+    else if(N == 64){
+        for(out_i=0;out_i<N;out_i+=8){
+            for(out_j=0;out_j<M;out_j+=8){
+                for(in_i=0;in_i<4;++in_i){
+		            for(in_j=0;in_j<8;++in_j){
+                        temp[in_j] = A[out_i+in_i][out_j+in_j];
+                    }
+                    for(in_j=0;in_j<4;++in_j){
+                        B[out_j+in_j][out_i+in_i] = temp[in_j];
+                    }
+                    for(in_j=0;in_j<4;++in_j){
+                        B[out_j+in_j][out_i+in_i+4] = temp[in_j+4];
+                    }
+                }
+
+                for(in_i=0;in_i<4;++in_i){
+		            for(in_j=0;in_j<4;++in_j){
+                        temp[in_j] = A[out_i+in_j+4][out_j+in_i];
+                    }
+                    for(in_j=0;in_j<4;++in_j){
+                        temp[in_j+4] = B[out_i+in_i][out_j+in_j+4];
+                    }
+                    for(in_j=0;in_j<4;++in_j){
+                        B[out_i+in_i][out_j+in_j+4] = temp[in_j];
+                    }
+                    for(in_j=0;in_j<4;++in_j){
+                        B[out_i+in_i+4][out_j+in_j] = temp[in_j+4];
+                    }
+                }
+
+                for(in_i=0;in_i<4;++in_i){
+		            for(in_j=0;in_j<4;++in_j){
+	                    temp[in_j] = A[out_i+in_i+4][out_j+in_j+4];
+                    }
+		            for(in_j=0;in_j<4;++in_j){
+	                    B[out_j+in_j+4][out_i+in_i+4] = temp[in_j];
+                    }
+                }
+            }
+        }
+    }
+    else{
+        for(out_i=0;out_i<N;out_i+=16){
+            for(out_j=0;out_j<M;out_j+=16){
+                for(in_i=out_i;in_i<out_i+16 && N;++in_i){
+                    for(in_j=0;in_j<out_j+16 && M;++in_j){
+	                    B[in_j][in_i] = A[in_i][in_j];
+                    }
+                }
+            }
+        }
+    }
+    	
 }
 
 /* 
