@@ -58,17 +58,17 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                 }
 
                 for(in_i=0;in_i<4;++in_i){
-		            for(in_j=0;in_j<4;++in_j){
+		    for(in_j=0;in_j<4;++in_j){
                         temp[in_j] = A[out_i+in_j+4][out_j+in_i];
                     }
                     for(in_j=0;in_j<4;++in_j){
-                        temp[in_j+4] = B[out_i+in_i][out_j+in_j+4];
+                        temp[in_j+4] = B[out_j+in_i][out_i+in_j+4];
                     }
                     for(in_j=0;in_j<4;++in_j){
-                        B[out_i+in_i][out_j+in_j+4] = temp[in_j];
+                        B[out_j+in_i][out_i+in_j+4] = temp[in_j];
                     }
                     for(in_j=0;in_j<4;++in_j){
-                        B[out_i+in_i+4][out_j+in_j] = temp[in_j+4];
+                        B[out_j+in_i+4][out_i+in_j] = temp[in_j+4];
                     }
                 }
 
@@ -86,8 +86,8 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
     else{
         for(out_i=0;out_i<N;out_i+=16){
             for(out_j=0;out_j<M;out_j+=16){
-                for(in_i=out_i;in_i<out_i+16 && N;++in_i){
-                    for(in_j=0;in_j<out_j+16 && M;++in_j){
+                for(in_i=out_i;in_i<(out_i+16) && (in_i<N);++in_i){
+                    for(in_j=out_j;in_j<(out_j+16) && (in_j<M);++in_j){
 	                    B[in_j][in_i] = A[in_i][in_j];
                     }
                 }
@@ -130,7 +130,6 @@ void registerFunctions()
 {
     /* Register your solution function */
     registerTransFunction(transpose_submit, transpose_submit_desc); 
-    registerTransFunction(transpose_test, transpose_test_desc); 
 
     /* Register any additional transpose functions */
     registerTransFunction(trans, trans_desc); 
