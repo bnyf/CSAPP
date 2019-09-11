@@ -22,133 +22,71 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
-    int Block = 8;
     int out_i = 0;
     int out_j = 0;
     int in_i = 0;
     int in_j = 0;
-    int x,y = 0;
-    for(out_i=0;(out_i+Block)<=N;out_i+=Block){
-        //N>=Block,M>=Block
-        for(out_j=0;(out_j+Block)<=M;out_j+=Block){
-            for(in_i=0;in_i<Block;++in_i){
-                for(in_j=0;in_j<Block;++in_j){
-		    if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		    }
-                    B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
-                }
-		B[x][x] = y;
-            }
-        }
-
-        //N>=Block,M<Block   
-        for(in_i=0;in_i<Block;++in_i){
-            for(in_j=0;in_j<M%Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		}
-                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
-            }
-	    B[x][x] = y;
-        }    
-    }
-
-    //N<Block,M>=Block
-    for(out_j=0;(out_j+Block)<=M;out_j+=Block){
-        for(in_i=0;in_i<N%Block;++in_i){
-            for(in_j=0;in_j<Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		   }
-                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
-            }
-	    B[x][x] = y;
+    int temp[8];
+    temp[0] = -1;
+    
+    if(N == 32){
+        for(out_i=0;out_i<N;out_i+=8){
+          for(out_j=0;out_j<M;out_j+=8){
+              for(in_i=0;in_i<8;++in_i){
+                  for(in_j=0;in_j<8;++in_j){
+	              temp[in_j] = A[out_i+in_i][out_j+in_j];
+                  }
+		  for(in_j=0;in_j<8;++in_j){
+	              B[out_j+in_j][out_i+in_i] = temp[in_j];
+                  }
+              }
+          }
         }
     }
+    else if(N == 64){
+        for(out_i=0;out_i<N;out_i+=4){
+          for(out_j=0;out_j<M;out_j+=4){
+              for(in_i=0;in_i<4;++in_i){
+                  for(in_j=0;in_j<4;++in_j){
+	              temp[in_j] = A[out_i+in_i][out_j+in_j];
+                  }
+		  for(in_j=0;in_j<4;++in_j){
+	              B[out_j+in_j][out_i+in_i] = temp[in_j];
+                  }
 
-    //N<Block,M<Block
-    for(in_i=0;in_i<N%Block;++in_i){
-        for(in_j=0;in_j<M%Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		    }
-            B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+              }
+          }
         }
     }
+    	
 }
 
 char transpose_test_desc[] = "Transpose test";
 void transpose_test(int M, int N, int A[N][M], int B[M][N])
 {
-    int Block = 8;
+    int Block = 32;
     int out_i = 0;
     int out_j = 0;
     int in_i = 0;
     int in_j = 0;
-    int x,y = 0;
-    for(out_i=0;(out_i+Block)<=N;out_i+=Block){
-        //N>=Block,M>=Block
-        for(out_j=0;(out_j+Block)<=M;out_j+=Block){
+    int y = 0;
+    int x = -1;
+    for(out_i=0;out_i<N;out_i+=Block){
+        for(out_j=0;out_j<M;out_j+=Block){
             for(in_i=0;in_i<Block;++in_i){
                 for(in_j=0;in_j<Block;++in_j){
-		    if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
+		    if(out_i + in_i == out_j + in_j){
+		    	x = out_i + in_i;
 			y = A[x][x];
 			continue;
 		    }
-                    B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
+                    B[out_j+in_j][out_i+in_i] = A[out_i+in_i][out_j+in_j];
                 }
-		B[x][x] = y;
+		if(x >= 0){
+		    B[x][x] = y;
+		    x = -1;
+	        }
             }
-        }
-
-        //N>=Block,M<Block   
-        for(in_i=0;in_i<Block;++in_i){
-            for(in_j=0;in_j<M%Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		}
-                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
-            }
-	    B[x][x] = y;
-        }    
-    }
-
-    //N<Block,M>=Block
-    for(out_j=0;(out_j+Block)<=M;out_j+=Block){
-        for(in_i=0;in_i<N%Block;++in_i){
-            for(in_j=0;in_j<Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		   }
-                B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
-            }
-	    B[x][x] = y;
-        }
-    }
-
-    //N<Block,M<Block
-    for(in_i=0;in_i<N%Block;++in_i){
-        for(in_j=0;in_j<M%Block;++in_j){
-		if(out_i + in_j == out_j + in_i){
-		    	x = out_i + in_j;
-			y = A[x][x];
-			continue;
-		    }
-            B[out_i+in_j][out_j+in_i] = A[out_j+in_i][out_i+in_j];
         }
     }
 }
